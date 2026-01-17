@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from logging import Logger
 from pathlib import Path
 from pydantic import BaseModel
@@ -55,7 +56,18 @@ class Recipe(BaseModel):
         return cls.from_dict(recipe, logger=logger)
 
     @classmethod
-    def from_dict(cls, data: dict, logger: Logger) -> "Recipe":
+    def from_dict(
+        cls, data: dict, logger: Logger, config_path: Path | None = None
+    ) -> "Recipe":
+        if config_path is None and data.get("config") is None:
+            raise ValueError("No config provided.")
+
+        if config_path:
+            with open(config_path, "r") as f:
+                config = json.load(f)
+
+            data["config"] = config
+
         return cls(
             **data,
             logger=logger if logger else Logger("RecipeLogger"),

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import click
 import logging
@@ -6,7 +7,7 @@ import datetime
 
 from models.course import Course
 from models.recipe import Recipe, RecipeMetadata
-from models.store import load_recipe_store
+from models.store import load_recipe_from_store, load_recipe_store
 
 
 class LogLevel(click.ParamType):
@@ -56,27 +57,34 @@ def main(
 
 
 @main.command()
+@click.option("--key", "-k", help="Key of the recipe to use")
 @click.option("--recipe-file", "-f", type=click.Path(), help="Path to the recipe file.")
-@click.option(
-    "--config-file", "-c", type=click.Path(exists=True), help="Path to the config file."
-)
+@click.option("--config-file", "-c", type=click.Path(), help="Path to the config file.")
 @click.pass_context
 def single_dish(
-    recipe_file: Path,
+    key: str | None = None,
+    recipe_file: Path | None = None,
     config_file: Path | None = None,
     context: click.Context = None,
 ):
+    if not key and not recipe_file:
+        raise ValueError("single_dish must have either key or recipe file to run.")
+
     click.echo("Serving a single dish...")
 
     logger: logging.Logger = context.obj["logger"]
     logger = logger.getChild("single_dish_logger")
 
-    logger.info(f"Using recipe file: {recipe_file}")
-    recipe = Recipe.from_json(recipe_file, config_path=config_file, logger=logger)
+    if key:
+        recipe_data = json.loads(load_recipe_from_store(key))
+        recipe = Recipe.from_dict(recipe_data, logger=logger, config_path=config_file)
+    else:
+        logger.info(f"Using recipe file: {recipe_file}")
+        recipe = Recipe.from_json(recipe_file, config_path=config_file, logger=logger)
 
-    logger.info(
-        f"Recipe '{recipe.metadata.name}' (version {recipe.metadata.version}) loaded."
-    )
+        logger.info(
+            f"Recipe '{recipe.metadata.name}' (version {recipe.metadata.version}) loaded."
+        )
 
     recipe.cook()
 

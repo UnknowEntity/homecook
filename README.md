@@ -61,7 +61,8 @@ Execute a single recipe from a JSON file.
 python main.py single-dish --recipe-file path/to/recipe.json [--config-file path/to/config.json]
 ```
 
-- `--recipe-file` / `-f`: Path to the recipe JSON file (required).
+- `--key` / `-k`: The recipe store key of the recipe to use for this run (required if --recipe-file or -f is omit).
+- `--recipe-file` / `-f`: Path to the recipe JSON file (required if --key or -k is omit).
 - `--config-file` / `-c`: Path to a separate config JSON file (optional if config is embedded in recipe).
 
 #### `multi-courses`
@@ -83,10 +84,11 @@ Utility commands for generating sample files.
 Generate a sample recipe JSON file.
 
 ```bash
-python main.py utensil create-sample-recipe [--output path/to/output.json]
+python main.py utensil create-sample-recipe [--output path/to/output.json] [--store-recipe]
 ```
 
 - `--output` / `-o`: Output path for the sample recipe. Default: `sample_recipe.json`.
+- `--store-recipe` / `-s`: Store the generated sample recipe in the recipe store for easy reference. The recipe is stored with a key derived from the output filename (without extension).
 
 ##### `create-sample-course`
 
@@ -97,6 +99,48 @@ python main.py utensil create-sample-course [--output path/to/output.json]
 ```
 
 - `--output` / `-o`: Output path for the sample course. Default: `sample_course.json`.
+
+##### `add-recipe-to-store`
+
+Add an existing recipe file to the recipe store.
+
+```bash
+python main.py utensil add-recipe-to-store --recipe-file path/to/recipe.json
+```
+
+- `--recipe-file` / `-f`: Path to the recipe JSON file to add (required).
+
+This command extracts the recipe's metadata (name and description) and stores the file path in the recipe store for quick access.
+
+## Recipe Store
+
+HomeCook includes a recipe store for managing and quickly accessing frequently used recipes. The store is loaded on startup and allows recipes to be referenced by keys instead of full paths.
+
+- **Filename**: `recipes.toml`
+- **Default Location**: User's home directory (e.g., `C:\Users\username\` on Windows, `/home/username/` on Linux/Mac).
+- **Custom Location**: Set the `HOMECOOK_STORE_DIR` environment variable to specify a different directory.
+- **Storing Recipes**: Use `utensil add-recipe-to-store` to add a recipe file. It uses the recipe's name as the key and stores the path and description.
+- **Accessing Stored Recipes**: Recipes in the store can be used in courses or directly via their keys (future CLI enhancements may support this).
+- **Persistence**: The store is persisted in a TOML file for reuse across sessions.
+
+### Example Base Store File
+
+If the store file doesn't exist, a base file is created with the following structure:
+
+```toml
+# HomeCook Recipes Store
+# Add your recipes here in TOML format.
+
+title = "My Recipe Store"
+
+[recipes]
+[recipes.sample_recipe]
+path = "path/to/your/recipe.json"
+description = "A sample recipe entry"
+created_at = "20260117_000000"  # Timestamp when created
+```
+
+Each recipe entry includes the file path, description, and creation timestamp.
 
 ## Recipe Format
 
