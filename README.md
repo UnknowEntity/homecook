@@ -120,7 +120,7 @@ HomeCook includes a recipe store for managing and quickly accessing frequently u
 - **Default Location**: User's home directory (e.g., `C:\Users\username\` on Windows, `/home/username/` on Linux/Mac).
 - **Custom Location**: Set the `HOMECOOK_STORE_DIR` environment variable to specify a different directory.
 - **Storing Recipes**: Use `utensil add-recipe-to-store` to add a recipe file. It uses the recipe's name as the key and stores the path and description.
-- **Accessing Stored Recipes**: Recipes in the store can be used in courses or directly via their keys (future CLI enhancements may support this).
+- **Accessing Stored Recipes**: Recipes in the store can be used in courses or directly via their keys.
 - **Persistence**: The store is persisted in a TOML file for reuse across sessions.
 
 ### Example Base Store File
