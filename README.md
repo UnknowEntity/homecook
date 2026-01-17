@@ -77,7 +77,7 @@ python main.py multi-courses --menu-file path/to/course.json
 
 #### `utensil`
 
-Utility commands for generating sample files.
+Utility commands for homecook.
 
 ##### `create-sample-recipe`
 
