@@ -1,0 +1,205 @@
+from pathlib import Path
+import click
+import logging
+import datetime
+
+
+from models.course import Course
+from models.recipe import Recipe, RecipeMetadata
+from models.store import load_recipe_store
+
+
+class LogLevel(click.ParamType):
+    name = "loglevel"
+
+    def convert(self, value, param, ctx):
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        if value.upper() not in valid_levels:
+            self.fail(
+                f"{value} is not a valid log level. Choose from {valid_levels}.",
+                param,
+                ctx,
+            )
+        return value.upper()
+
+
+@click.group()
+@click.option("--log-path", "-l", type=click.Path(), help="Path to the log file.")
+@click.option(
+    "--log-level", "-v", default="INFO", help="Logging level.", type=LogLevel()
+)
+@click.pass_context
+def main(
+    log_file: Path | None = None,
+    log_level: str = "INFO",
+    ctx: click.Context = None,
+):
+    click.echo("Welcome to HomeCook!")
+    click.echo("================================")
+    click.echo("Starting HomeCook CLI...")
+
+    logger = logging.getLogger("HomeCook_Logger")
+    logger.setLevel(getattr(logging, log_level))
+
+    if log_file:
+        log_path = Path(log_file)
+        log_path.mkdir(parents=True, exist_ok=True)
+        logging.basicConfig(
+            filename=log_file.joinpath(
+                f"homecook_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+            )
+        )
+
+    ctx.obj = {"logger": logger}
+
+    load_recipe_store(logger=logger)
+
+
+@main.command()
+@click.option("--recipe-file", "-f", type=click.Path(), help="Path to the recipe file.")
+@click.option(
+    "--config-file", "-c", type=click.Path(exists=True), help="Path to the config file."
+)
+@click.pass_context
+def single_dish(
+    recipe_file: Path,
+    config_file: Path | None = None,
+    context: click.Context = None,
+):
+    click.echo("Serving a single dish...")
+
+    logger: logging.Logger = context.obj["logger"]
+    logger = logger.getChild("single_dish_logger")
+
+    logger.info(f"Using recipe file: {recipe_file}")
+    recipe = Recipe.from_json(recipe_file, config_path=config_file, logger=logger)
+
+    logger.info(
+        f"Recipe '{recipe.metadata.name}' (version {recipe.metadata.version}) loaded."
+    )
+
+    recipe.cook()
+
+
+@main.command()
+@click.option(
+    "--menu-file",
+    "-f",
+    type=click.Path(exists=True),
+    help="Path to the courses directory.",
+)
+@click.pass_context
+def multi_courses(
+    menu_file: Path,
+    context: click.Context = None,
+):
+    click.echo("Serving multiple courses...")
+
+    logger: logging.Logger = context.obj["logger"]
+    logger = logger.getChild("multi_courses_logger")
+
+    logger.info(f"Using menu file: {menu_file}")
+
+    course = Course.from_menu_file(menu_file, logger=logger)
+
+    logger.info(f"Course '{course.title}' loaded with {len(course.recipes)} recipes.")
+
+    course.execute_all_recipes()
+
+
+@main.command()
+def utensil():
+    click.echo("Using utensil functions...")
+
+
+@utensil.command()
+@click.option(
+    "--output-file",
+    "-o",
+    type=click.Path(),
+    default="sample_recipe.json",
+    help="Output path for the sample recipe JSON.",
+)
+@click.option(
+    "--store-recipe",
+    "-s",
+    is_flag=True,
+    default=False,
+    help="Store the sample recipe in the recipe store.",
+)
+def create_sample_recipe(output: Path, store_recipe: bool):
+    sample_recipe = Recipe.to_sample_dict()
+    click.echo("Create sample recipe JSON at: " + str(output))
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with open(output, "w") as f:
+        import json
+
+        json.dump(sample_recipe, f, indent=4)
+
+    if store_recipe:
+        from models.store import add_recipe_to_store
+
+        recipe_key = output.stem
+
+        add_recipe_to_store(
+            key=recipe_key,
+            path=str(output),
+            description=f"A place holder description for {recipe_key}.",
+        )
+        click.echo(f"Sample recipe stored in recipe store with key '{recipe_key}'.")
+
+
+@utensil.command()
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default="sample_course.json",
+    help="Output path for the sample course JSON.",
+)
+def create_sample_course(output: Path):
+    click.echo("Create sample course JSON at: " + str(output))
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    Course.create_template_file(str(output))
+
+
+@utensil.command()
+@click.option(
+    "--recipe-file",
+    "-f",
+    type=click.Path(exists=True),
+    help="Path to the recipe file to add to the store.",
+)
+def add_recipe_to_store(recipe_file: Path):
+    from models.store import add_recipe_to_store
+
+    if not recipe_file.exists() or not recipe_file.is_file():
+        raise FileNotFoundError(f"Recipe file '{recipe_file}' not found.")
+
+    # The recipe inside might be a template recipe and potentially
+    # couldn't pass validation check for the entire Recipe class
+    # but the metadata for the recipe isn't a object that contain
+    # template string
+    with open(recipe_file, "r") as f:
+        import json
+
+        recipe_data = json.load(f)
+
+        recipe_metadata = RecipeMetadata(**recipe_data.get("metadata", {}))
+
+    key = recipe_metadata.name
+    description = recipe_metadata.description
+
+    add_recipe_to_store(
+        key=key,
+        path=str(recipe_file),
+        description=description,
+    )
+
+    click.echo("Add a recipe to the recipe store.")
+
+
+if __name__ == "__main__":
+    main()
