@@ -81,7 +81,7 @@ class Course(BaseModel):
             "description": "A sample course containing multiple recipes.",
             "recipes": [
                 {
-                    "path": "path/to/recipe1.json",
+                    "key": "recipe1",
                     "variable": {
                         "CWD": "/path/to/working/directory1",
                         "HEADLESS": "true",

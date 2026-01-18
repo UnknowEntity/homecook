@@ -3,7 +3,6 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from models.step.step import Step, StepType
-from models.step_status import StepStatus
 
 from playwright.sync_api import Page
 
@@ -46,7 +45,6 @@ class PlaywrightStep(Step):
     A step that performs actions using Playwright.
     """
 
-    status: StepStatus
     action: PlayWrightActionType
     parameters: dict[str, any]
     page: Page
@@ -54,10 +52,13 @@ class PlaywrightStep(Step):
     default_timeout: int = 30000  # in milliseconds
 
     @classmethod
-    def with_config(cls, config: PlayWrightConfig, **data) -> "PlaywrightStep":
+    def with_config(
+        cls, config: PlayWrightConfig, page: Page, **data
+    ) -> "PlaywrightStep":
         """Create a PlaywrightStep instance with the provided configuration."""
         return cls(
             **data,
+            page=page,
             screen_shot_path=config.screen_shot_path,
             default_timeout=config.default_timeout,
         )
@@ -67,7 +68,7 @@ class PlaywrightStep(Step):
         """
         Returns a sample dictionary representation of the PlaywrightStep.
         """
-        base_dict = super().to_sample_dict()
+        base_dict = Step.to_sample_dict()
         base_dict.update(
             {
                 "name": "playwright_step",

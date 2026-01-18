@@ -1,7 +1,7 @@
 from enum import Enum
 from logging import Logger
 from string import Template
-from models.step.step import Step
+from models.step.step import Step, StepType
 
 
 class CustomStepAction(Enum):
@@ -20,20 +20,22 @@ class CustomStep(Step):
 
     @staticmethod
     def to_sample_dict():
-        return (
-            super()
-            .to_sample_dict()
-            .update(
-                {
-                    "name": "custom_step",
-                    "description": "A custom script step (this will execute a custom script in Python)",
-                    "parameters": {
-                        "script": "params[0] + params[1]",
-                        "params": {"0": "Hello, ", "1": "world!"},
-                    },
-                }
-            )
+        sample = Step.to_sample_dict()
+
+        sample.update(
+            {
+                "name": "custom_step",
+                "step_type": StepType.CUSTOM_SCRIPT.value,
+                "action": CustomStepAction.EVAL.value,
+                "description": "A custom script step (this will execute a custom script in Python)",
+                "parameters": {
+                    "script": "params[0] + params[1]",
+                    "params": {"0": "Hello, ", "1": "world!"},
+                },
+            }
         )
+
+        return sample
 
     def execute(self):
         match self.action:

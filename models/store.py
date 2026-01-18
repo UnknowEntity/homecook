@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from logging import Logger
 import os
 from pathlib import Path
@@ -55,7 +55,7 @@ def load_recipe_store(logger: Logger) -> TOMLDocument:
 
     base_store_dir = os.getenv("HOMECOOK_STORE_DIR", str(Path.home()))
 
-    recipes_store = base_store_dir.joinpath(RECIPES_STORE_FILENAME)
+    recipes_store = Path(base_store_dir).joinpath(RECIPES_STORE_FILENAME)
     RECIPES_STORE_PATH = recipes_store
 
     logger.info(f"Using recipe store at: {recipes_store}")

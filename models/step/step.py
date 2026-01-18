@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class StepType(Enum):
@@ -19,7 +19,9 @@ class Step(BaseModel):
     parameters: dict[str, any]
     parameter_paths: list[str] | None = None
 
-    def execute(self) -> None | any:
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def execute(self):
         raise NotImplementedError("Execute method must be implemented in subclasses")
 
     @staticmethod

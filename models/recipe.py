@@ -2,12 +2,12 @@ from datetime import datetime
 import json
 from logging import Logger
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from models.config import Config
 from models.step.custom_step import CustomStep
-from models.step.fs_step import FsStep
-from models.step.playwright_step import PlaywrightStep
+from models.step.fs_step import FsConfig, FsStep
+from models.step.playwright_step import PlayWrightConfig, PlaywrightStep
 from models.step.step import Step, StepType
 
 from playwright.sync_api import Page
@@ -24,6 +24,8 @@ class Recipe(BaseModel):
     steps: list[dict[str, any]]
     logger: Logger
     config: Config
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def use_playwright(self) -> bool:
@@ -68,6 +70,8 @@ class Recipe(BaseModel):
 
             data["config"] = config
 
+        data["config"] = Config(**data["config"])
+
         return cls(
             **data,
             logger=logger if logger else Logger("RecipeLogger"),
@@ -81,7 +85,9 @@ class Recipe(BaseModel):
                 from models.step.playwright_step import PlaywrightStep
 
                 return PlaywrightStep.with_config(
-                    self.config.playwright_config, **step_data, page=page
+                    self.config.playwright_config,
+                    page=page,
+                    **step_data,
                 )
 
             case StepType.FS:
@@ -123,7 +129,11 @@ class Recipe(BaseModel):
 
             try:
                 current_step.parse_parameters(params)
-                result = current_step.execute()
+
+                if isinstance(current_step, FsStep):
+                    result = current_step.execute(self.config.fs_config)
+                else:
+                    result = current_step.execute()
 
                 if result:
                     params.update({current_step.name: result})
@@ -132,7 +142,7 @@ class Recipe(BaseModel):
             except Exception as e:
                 if isinstance(current_step, PlaywrightStep):
                     screenshot_path = (
-                        self.config.cwd
+                        Path(self.config.cwd)
                         / f"step_{step_index + 1}_error_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                     )
                     current_step.page.screenshot(path=screenshot_path)
@@ -148,11 +158,8 @@ class Recipe(BaseModel):
                 time.sleep(self.config.slow_mode / 1000)
 
     @staticmethod
-    def create_template_file(path: str):
-        from pathlib import Path
-        import json
-
-        template = {
+    def create_template_file() -> dict[str, any]:
+        return {
             "metadata": {
                 "name": "sample_recipe",
                 "version": "1.0.0",
@@ -161,8 +168,8 @@ class Recipe(BaseModel):
             "config": {
                 "slow_mode": 0,
                 "cwd": ".",
-                "playwright_config": PlaywrightStep.PlayWrightConfig.to_sample_dict(),
-                "fs_config": FsStep.FsConfig.to_sample_dict(),
+                "playwright_config": PlayWrightConfig.to_sample_dict(),
+                "fs_config": FsConfig.to_sample_dict(),
             },
             "steps": [
                 PlaywrightStep.to_sample_dict(),
@@ -170,6 +177,3 @@ class Recipe(BaseModel):
                 CustomStep.to_sample_dict(),
             ],
         }
-
-        with open(Path(path), "w") as f:
-            json.dump(template, f, indent=4)

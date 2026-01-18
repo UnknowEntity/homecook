@@ -34,9 +34,9 @@ class LogLevel(click.ParamType):
 )
 @click.pass_context
 def main(
-    log_file: Path | None = None,
-    log_level: str = "INFO",
     ctx: click.Context = None,
+    log_path: Path | None = None,
+    log_level: str = "INFO",
 ):
     click.echo("Welcome to HomeCook!")
     click.echo("================================")
@@ -45,11 +45,11 @@ def main(
     logger = logging.getLogger("HomeCook_Logger")
     logger.setLevel(getattr(logging, log_level))
 
-    if log_file:
-        log_path = Path(log_file)
+    if log_path:
+        log_path = Path(log_path)
         log_path.mkdir(parents=True, exist_ok=True)
         logging.basicConfig(
-            filename=log_file.joinpath(
+            filename=log_path.joinpath(
                 f"homecook_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
             )
         )
@@ -65,10 +65,10 @@ def main(
 @click.option("--config-file", "-c", type=click.Path(), help="Path to the config file.")
 @click.pass_context
 def single_dish(
+    context: click.Context,
     key: str | None = None,
     recipe_file: Path | None = None,
     config_file: Path | None = None,
-    context: click.Context = None,
 ):
     if not key and not recipe_file:
         raise ValueError("single_dish must have either key or recipe file to run.")
@@ -112,8 +112,8 @@ def single_dish(
 )
 @click.pass_context
 def multi_courses(
+    context: click.Context,
     menu_file: Path,
-    context: click.Context = None,
 ):
     click.echo("Serving multiple courses...")
     toaster = get_windows_toaster()
@@ -135,7 +135,7 @@ def multi_courses(
     toaster.show_toast(Toast(["Course complete", "All recipes finished cooking"]))
 
 
-@main.command()
+@main.group()
 def utensil():
     click.echo("Using utensil functions...")
 
@@ -143,7 +143,7 @@ def utensil():
 @utensil.command()
 @click.option(
     "--output-file",
-    "-o",
+    "-f",
     type=click.Path(),
     default="sample_recipe.json",
     help="Output path for the sample recipe JSON.",
@@ -155,12 +155,13 @@ def utensil():
     default=False,
     help="Store the sample recipe in the recipe store.",
 )
-def create_sample_recipe(output: Path, store_recipe: bool):
-    sample_recipe = Recipe.to_sample_dict()
-    click.echo("Create sample recipe JSON at: " + str(output))
+def create_sample_recipe(output_file: Path, store_recipe: bool):
+    sample_recipe = Recipe.create_template_file()
+    click.echo("Create sample recipe JSON at: " + str(output_file))
 
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with open(output, "w") as f:
+    Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_file, "w") as f:
         import json
 
         json.dump(sample_recipe, f, indent=4)
@@ -168,11 +169,11 @@ def create_sample_recipe(output: Path, store_recipe: bool):
     if store_recipe:
         from models.store import add_recipe_to_store
 
-        recipe_key = output.stem
+        recipe_key = output_file.stem
 
         add_recipe_to_store(
             key=recipe_key,
-            path=str(output),
+            path=str(output_file),
             description=f"A place holder description for {recipe_key}.",
         )
         click.echo(f"Sample recipe stored in recipe store with key '{recipe_key}'.")
@@ -180,17 +181,22 @@ def create_sample_recipe(output: Path, store_recipe: bool):
 
 @utensil.command()
 @click.option(
-    "--output",
-    "-o",
+    "--output-file",
+    "-f",
     type=click.Path(),
     default="sample_course.json",
     help="Output path for the sample course JSON.",
 )
-def create_sample_course(output: Path):
-    click.echo("Create sample course JSON at: " + str(output))
+def create_sample_course(output_file: Path):
+    click.echo("Create sample course JSON at: " + str(output_file))
 
-    output.parent.mkdir(parents=True, exist_ok=True)
-    Course.create_template_file(str(output))
+    Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+    sample_course = Course.to_sample_dict()
+
+    with open(output_file, "w") as f:
+        import json
+
+        json.dump(sample_course, f, indent=4)
 
 
 @utensil.command()
