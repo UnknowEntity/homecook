@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import sys
 import click
 import logging
 import datetime
@@ -43,6 +44,7 @@ def main(
     click.echo("Starting HomeCook CLI...")
 
     logger = logging.getLogger("HomeCook_Logger")
+    logger.addHandler(logging.StreamHandler(sys.stdout))
     logger.setLevel(getattr(logging, log_level))
 
     if log_path:
