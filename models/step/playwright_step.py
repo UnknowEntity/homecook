@@ -20,6 +20,7 @@ class PlayWrightActionType(Enum):
     WAIT_FOR_SELECTOR = "WAIT_FOR_SELECTOR"
     WAIT_AMOUNT_OF_TIME = "WAIT_AMOUNT_OF_TIME"
     EXTRACT_TEXT = "EXTRACT_TEXT"
+    EXTRACT_ATTR = "EXTRACT_ATTR"
     TAKE_SCREENSHOT = "TAKE_SCREENSHOT"
 
 
@@ -102,6 +103,8 @@ class PlaywrightStep(Step):
                 self._wait_amount_of_time()
             case PlayWrightActionType.EXTRACT_TEXT:
                 return self._extract_text()
+            case PlayWrightActionType.EXTRACT_ATTR:
+                return self._extract_attr()
             case PlayWrightActionType.TAKE_SCREENSHOT:
                 self.take_screenshot()
 
@@ -178,4 +181,17 @@ class PlaywrightStep(Step):
 
         raise ValueError(
             "Selector not provided or element not found for text extraction."
+        )
+
+    def _extract_attr(self) -> dict[str, str | None]:
+        selector: str = self.parameters.get("selector")
+        attr: str = self.parameters.get("attr")
+
+        if selector and attr:
+            element = self.page.query_selector(selector)
+            if element:
+                return {"text": element.get_attribute(attr)}
+
+        raise ValueError(
+            "Selector or attr not provided or element not found for text extraction."
         )
