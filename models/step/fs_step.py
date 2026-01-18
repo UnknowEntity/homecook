@@ -1,5 +1,6 @@
 from enum import Enum
 import os
+import fnmatch
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -11,6 +12,7 @@ class FsStepAction(Enum):
     SET_CWD = "SET_CWD"
     CREATE_FILE = "CREATE_FILE"
     DELETE_FILE = "DELETE_FILE"
+    BULK_DELETE_FILES = "BULK_DELETE_FILES"
     MOVE_FILE = "MOVE_FILE"
     COPY_FILE = "COPY_FILE"
     READ_FILE = "READ_FILE"
@@ -68,6 +70,8 @@ class FsStep(Step):
                 return self._create_file()
             case FsStepAction.DELETE_FILE:
                 return self._delete_file()
+            case FsStepAction.BULK_DELETE_FILES:
+                return self._bulk_delete_files()
             case FsStepAction.MOVE_FILE:
                 return self._move_file()
             case FsStepAction.COPY_FILE:
@@ -99,6 +103,39 @@ class FsStep(Step):
 
         if file_path.exists() and file_path.is_file():
             file_path.unlink()
+
+    def _bulk_delete_files(self):
+        root_dir = self.parameters.get("root_dir")
+
+        if root_dir is None:
+            root_dir = self.cwd
+
+        else:
+            root_dir = Path(root_dir)
+
+        files: list[str] = self.parameters.get("files_path")
+
+        if files:
+            for file in files:
+                delete_file = root_dir / file
+
+                delete_file.unlink()
+
+            return
+
+        exclude_files: list[str] = self.parameters.get("exclude_files")
+        exclude_patterns: list[str] = self.parameters.get("exclude_patterns")
+
+        for file in root_dir.iterdir():
+            if exclude_files and file.name in exclude_files:
+                continue
+
+            if exclude_patterns and any(
+                (fnmatch.fnmatch(pattern, file.name)) for pattern in exclude_patterns
+            ):
+                continue
+
+            file.unlink()
 
     def _move_file(self):
         source_path: Path = self.cwd / self.parameters["source_path"]
