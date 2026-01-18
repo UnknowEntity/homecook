@@ -4,8 +4,11 @@ import click
 import logging
 import datetime
 
+from windows_toasts import Toast
+
 
 from models.course import Course
+from models.notification import get_windows_toaster
 from models.recipe import Recipe, RecipeMetadata
 from models.store import load_recipe_from_store, load_recipe_store
 
@@ -72,6 +75,8 @@ def single_dish(
 
     click.echo("Serving a single dish...")
 
+    toaster = get_windows_toaster()
+
     logger: logging.Logger = context.obj["logger"]
     logger = logger.getChild("single_dish_logger")
 
@@ -86,7 +91,16 @@ def single_dish(
             f"Recipe '{recipe.metadata.name}' (version {recipe.metadata.version}) loaded."
         )
 
-    recipe.cook()
+    toaster.show_toast(Toast(["Begin cooking"]))
+    try:
+        recipe.cook()
+    except Exception as e:
+        toaster.show_toast(
+            Toast([f"Cooking failed for recipe: {recipe.metadata.name}"])
+        )
+        raise e
+
+    toaster.show_toast(Toast(["Cooking finished"]))
 
 
 @main.command()
@@ -102,6 +116,7 @@ def multi_courses(
     context: click.Context = None,
 ):
     click.echo("Serving multiple courses...")
+    toaster = get_windows_toaster()
 
     logger: logging.Logger = context.obj["logger"]
     logger = logger.getChild("multi_courses_logger")
@@ -112,7 +127,12 @@ def multi_courses(
 
     logger.info(f"Course '{course.title}' loaded with {len(course.recipes)} recipes.")
 
-    course.execute_all_recipes()
+    course.execute_all_recipes(toaster=toaster)
+
+    logger.info("All recipes finished cooking")
+    logger.info("Course completed")
+
+    toaster.show_toast(Toast(["Course complete", "All recipes finished cooking"]))
 
 
 @main.command()

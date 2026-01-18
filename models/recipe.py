@@ -91,7 +91,7 @@ class Recipe(BaseModel):
             case StepType.CUSTOM_SCRIPT:
                 from models.step.custom_step import CustomStep
 
-                return CustomStep(**step_data)
+                return CustomStep(**step_data, logger=self.logger)
 
     def cook(self) -> None:
         if not self.use_playwright:

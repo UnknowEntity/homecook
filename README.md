@@ -254,6 +254,10 @@ Example:
 
 #### Custom Script Steps
 
+Custom steps support two actions: `EVAL` for executing Python code and `PRINT` for logging messages.
+
+##### EVAL Action
+
 Execute Python code using `eval`. Parameters include `script` and `params`.
 
 Example:
@@ -262,9 +266,28 @@ Example:
 {
   "name": "custom_calc",
   "job_type": "CUSTOM_SCRIPT",
+  "action": "EVAL",
   "parameters": {
     "script": "params[0] + params[1]",
     "params": [10, 20]
+  }
+}
+```
+
+##### PRINT Action
+
+Log a message to the console/logger. Supports templating with `params`.
+
+Example:
+
+```json
+{
+  "name": "log_progress",
+  "job_type": "CUSTOM_SCRIPT",
+  "action": "PRINT",
+  "parameters": {
+    "message": "Processing item $item at step $step",
+    "params": {"item": "recipe1", "step": 5}
   }
 }
 ```

@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from pydantic import BaseModel
+from windows_toasts import Toast, WindowsToaster
 
 from models.recipe import Recipe
 from string import Template
@@ -46,10 +47,31 @@ class Course(BaseModel):
             recipes=recipes,
         )
 
-    def execute_all_recipes(self) -> None:
-        for recipe in self.recipes:
+    def execute_all_recipes(self, toaster: WindowsToaster) -> None:
+        for index, recipe in enumerate(self.recipes):
             logging.info(f"Starting recipe: {recipe.metadata.name}")
-            recipe.cook()
+
+            toaster.show_toast(
+                Toast(["Begin cooking", f"#{index}: {recipe.metadata.name}"])
+            )
+
+            try:
+                recipe.cook()
+            except Exception as e:
+                toaster.show_toast(
+                    Toast(
+                        [
+                            "Cooking failed",
+                            f"Recipe #{index} ({recipe.metadata.name}) failed to cook",
+                        ]
+                    )
+                )
+                raise e
+
+            toaster.show_toast(
+                Toast(["Cooking finished", f"Finish {index + 1}/{len(self.recipes)}"])
+            )
+
             logging.info(f"Finished recipe: {recipe.metadata.name}")
 
     @staticmethod

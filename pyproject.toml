@@ -11,4 +11,5 @@ dependencies = [
     "pytest>=9.0.2",
     "pytest-playwright>=0.7.2",
     "tomlkit>=0.14.0",
+    "windows-toasts>=1.3.1",
 ]
