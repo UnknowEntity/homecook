@@ -18,19 +18,18 @@ class CustomStep(Step):
     action: CustomStepAction
     logger: Logger
 
-    def to_dict(self):
+    @staticmethod
+    def to_sample_dict():
         return (
             super()
-            .to_dict()
+            .to_sample_dict()
             .update(
                 {
                     "name": "custom_step",
                     "description": "A custom script step (this will execute a custom script in Python)",
                     "parameters": {
-                        "script": self.parameters.get(
-                            "script", "params[0] + params[1]"
-                        ),
-                        "params": self.parameters.get("params", ["Hello, ", "World!"]),
+                        "script": "params[0] + params[1]",
+                        "params": {"0": "Hello, ", "1": "world!"},
                     },
                 }
             )
@@ -56,8 +55,10 @@ class CustomStep(Step):
         self.logger.info(message)
 
     def _eval(self):
+        step_params: dict[str, any] = self.parameters.get("params", {})
+
         # This parameters list will get evaluated in the script
-        params = self.parameters.get("params", [])  # noqa: F841
+        params: list[any] = [param for _, param in step_params.items()]  # noqa: F841
 
         eval_str: str = self.parameters.get("script", "")
 
