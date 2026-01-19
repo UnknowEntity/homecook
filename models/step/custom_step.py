@@ -58,13 +58,22 @@ class CustomStep(Step):
 
     def _eval(self):
         step_params: dict[str, any] = self.parameters.get("params", {})
+        exec_scripts: list[str] = self.parameters.get("exec_scripts")
+
+        scope = {}
 
         # This parameters list will get evaluated in the script
-        params: list[any] = [param for _, param in step_params.items()]  # noqa: F841
+        params: list[any] = [param for _, param in step_params.items()]
+
+        scope["params"] = params
+
+        if exec_scripts:
+            exec_expression = "\n".join(exec_scripts)
+            exec(exec_expression, scope)
 
         eval_str: str = self.parameters.get("script", "")
 
         if eval_str:
-            return {"result": eval(eval_str)}
+            return {"result": eval(eval_str, scope)}
 
         raise ValueError("No script provided for execution.")
