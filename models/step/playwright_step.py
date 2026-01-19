@@ -15,6 +15,7 @@ class PlayWrightActionType(Enum):
     CHECK = "CHECK"
     FOCUS = "FOCUS"
     UPLOAD_FILE = "UPLOAD_FILE"
+    DOWNLOAD_FILE = "DOWNLOAD_FILE"
     WAIT_FOR_REQUEST = "WAIT_FOR_REQUEST"
     WAIT_FOR_SELECTOR = "WAIT_FOR_SELECTOR"
     WAIT_AMOUNT_OF_TIME = "WAIT_AMOUNT_OF_TIME"
@@ -156,6 +157,29 @@ class PlaywrightStep(Step):
 
         if selector and file_path:
             self.page.set_input_files(selector, file_path, timeout=timeout)
+
+    def _download_file(self):
+        download_btn_selector: str = self.parameters.get("download_btn_selector")
+        download_path: str = self.parameters.get("download_path")
+        download_dir: str = self.parameters.get("download_dir")
+
+        if download_path is None and download_dir is None:
+            raise ValueError("You have to specify either download_path or download_dir")
+
+        # Start waiting for the download
+        with self.page.expect_download() as download_info:
+            # Perform the action that initiates download
+            self.page.get_by_text(download_btn_selector).click()
+
+        download = download_info.value
+
+        if download_path is None:
+            download_path = (
+                Path(download_dir).joinpath(download.suggested_filename).as_posix()
+            )
+
+        # Wait for the download process to complete and save the downloaded file somewhere
+        download.save_as(download_path)
 
     def _wait_for_request(self):
         url: str = self.parameters.get("url")
