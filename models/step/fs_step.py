@@ -111,7 +111,7 @@ class FsStep(Step):
             root_dir = self.cwd
 
         else:
-            root_dir = Path(root_dir)
+            root_dir = self.cwd / root_dir
 
         files: list[str] = self.parameters.get("files_path")
 
